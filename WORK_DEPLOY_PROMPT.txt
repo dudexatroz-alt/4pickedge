@@ -1,0 +1,18 @@
+Despliega 4 Pick Edge en Render usando los archivos de este paquete.
+
+Objetivo:
+1. Crear un Web Service llamado `4-pick-edge`.
+2. Usar Python 3.12.
+3. Build command: `pip install -r requirements.txt`.
+4. Start command: `gunicorn server:app`.
+5. Configurar health check en `/api/health`.
+6. Configurar almacenamiento persistente y `APP_DB` para que SQLite no se pierda entre deploys.
+7. Confirmar que HTTPS está activo.
+8. Después del deploy, probar:
+   - GET /
+   - GET /api/health
+   - GET /api/top4?date=YYYY-MM-DD
+9. Revisar logs de arranque y cualquier error de red.
+10. Verificar conectividad saliente hacia MLB Stats API y Polymarket Gamma/CLOB.
+11. No habilitar trading, órdenes, wallets ni autenticación de Polymarket.
+12. Devuélveme la URL pública y un resumen de las pruebas reales.

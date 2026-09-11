@@ -1,0 +1,14 @@
+4 PICK EDGE — RELEASE STATUS
+
+Code bundle: COMPLETE
+Local pure tests: PASS
+Render manifest: READY
+Persistent storage config: READY
+Health check: READY
+Post-deploy verifier: READY
+Real public deploy: PENDING
+Real MLB/Polymarket network validation: PENDING
+Push provider: PENDING
+TestFlight/Android store beta: PENDING
+
+Do not mark 100% until the public URL is deployed and post-deploy checks pass.

@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: 4-pick-edge
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DB
+        value: /opt/render/project/src/storage/4pickedge.db
+      - key: PYTHON_VERSION
+        value: 3.12.7
+    disk:
+      name: 4-pick-edge-data
+      mountPath: /opt/render/project/src/storage
+      sizeGB: 1

@@ -1,0 +1,19 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#070a0d"><title>4 Pick Edge · Push Ready</title>
+<style>:root{--bg:#070a0d;--card:#11171c;--line:#29343c;--gold:#ffc328;--mut:#98a5ae;--green:#48da8a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.app{max-width:430px;margin:auto;padding:16px 14px 80px}.hero,.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:12px}.hero{background:linear-gradient(140deg,#1b2730,#091015 70%)}.logo{font-size:36px;font-weight:1000;font-style:italic;color:var(--gold);line-height:.9}.mut{font-size:11px;color:var(--mut);line-height:1.5}.ok{color:var(--green);font-size:24px;font-weight:1000}button{width:100%;padding:12px;border:0;border-radius:11px;background:var(--gold);font-weight:900;margin-top:8px}</style></head><body><div class="app">
+<div class="hero"><div class="logo">4 PICK<br>EDGE</div><h2>Etapa 37 · Push Ready</h2><div class="mut">Notificaciones web/PWA preparadas para resultados y cambios importantes.</div></div>
+<div class="card"><div class="ok">PUSH READY ✓</div><p class="mut">La app ya puede registrar suscripciones de notificaciones. Para enviarlas de verdad hay que configurar las claves VAPID en el servidor HTTPS.</p><button onclick="enablePush()">Activar notificaciones</button><div id="msg" class="mut" style="margin-top:8px"></div></div>
+</div><script>
+function b64ToUint8(base64String){const padding='='.repeat((4-base64String.length%4)%4);const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
+async function enablePush(){
+  msg.textContent='Configurando…';
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){msg.textContent='Este navegador no soporta push web.';return}
+  const reg=await navigator.serviceWorker.register('/sw.js');
+  let k=await fetch('/api/push/public-key');
+  if(!k.ok){msg.textContent='Faltan claves VAPID en el servidor.';return}
+  let kd=await k.json();
+  let sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToUint8(kd.publicKey)});
+  await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub)});
+  msg.textContent='Notificaciones activadas ✅';
+}
+</script></body></html>

@@ -1,0 +1,9 @@
+{
+  "name": "4 Pick Edge",
+  "short_name": "4 Pick Edge",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070a0d",
+  "theme_color": "#070a0d",
+  "description": "Análisis deportivo inteligente"
+}
