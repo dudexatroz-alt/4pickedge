@@ -1,19 +1,113 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#070a0d"><title>4 Pick Edge · Push Ready</title>
-<style>:root{--bg:#070a0d;--card:#11171c;--line:#29343c;--gold:#ffc328;--mut:#98a5ae;--green:#48da8a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.app{max-width:430px;margin:auto;padding:16px 14px 80px}.hero,.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:12px}.hero{background:linear-gradient(140deg,#1b2730,#091015 70%)}.logo{font-size:36px;font-weight:1000;font-style:italic;color:var(--gold);line-height:.9}.mut{font-size:11px;color:var(--mut);line-height:1.5}.ok{color:var(--green);font-size:24px;font-weight:1000}button{width:100%;padding:12px;border:0;border-radius:11px;background:var(--gold);font-weight:900;margin-top:8px}</style></head><body><div class="app">
-<div class="hero"><div class="logo">4 PICK<br>EDGE</div><h2>Etapa 37 · Push Ready</h2><div class="mut">Notificaciones web/PWA preparadas para resultados y cambios importantes.</div></div>
-<div class="card"><div class="ok">PUSH READY ✓</div><p class="mut">La app ya puede registrar suscripciones de notificaciones. Para enviarlas de verdad hay que configurar las claves VAPID en el servidor HTTPS.</p><button onclick="enablePush()">Activar notificaciones</button><div id="msg" class="mut" style="margin-top:8px"></div></div>
-</div><script>
-function b64ToUint8(base64String){const padding='='.repeat((4-base64String.length%4)%4);const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
-async function enablePush(){
-  msg.textContent='Configurando…';
-  if(!('serviceWorker' in navigator) || !('PushManager' in window)){msg.textContent='Este navegador no soporta push web.';return}
-  const reg=await navigator.serviceWorker.register('/sw.js');
-  let k=await fetch('/api/push/public-key');
-  if(!k.ok){msg.textContent='Faltan claves VAPID en el servidor.';return}
-  let kd=await k.json();
-  let sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToUint8(kd.publicKey)});
-  await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub)});
-  msg.textContent='Notificaciones activadas ✅';
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#070a0d">
+<title>4 Pick Edge</title>
+<style>
+:root{--bg:#070a0d;--card:#11171c;--card2:#151d24;--line:#29343c;--gold:#ffc328;--mut:#98a5ae;--green:#48da8a;--red:#ff6b73;--blue:#7db8ff}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.app{max-width:480px;margin:auto;padding:14px 14px 90px}.hero,.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:12px}
+.hero{background:linear-gradient(145deg,#1b2730,#091015 72%)}.logo{font-size:34px;font-weight:1000;font-style:italic;color:var(--gold);line-height:.9}.tag{font-size:11px;color:var(--mut);margin-top:8px}
+.row{display:flex;gap:8px;align-items:center}.between{justify-content:space-between}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mut{font-size:12px;color:var(--mut)}
+.kpi{font-size:22px;font-weight:900}.pill{font-size:10px;padding:5px 8px;border-radius:999px;border:1px solid var(--line);color:var(--mut)}
+.pick{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:13px;margin-top:9px}.rank{color:var(--gold);font-weight:1000}.sel{font-size:18px;font-weight:900;margin:5px 0}.game{font-size:12px;color:var(--mut)}
+.badge{font-size:12px;font-weight:900}.win{color:var(--green)}.loss{color:var(--red)}.push{color:var(--gold)}.pending{color:var(--blue)}
+button,input{font:inherit}button{width:100%;padding:12px;border:0;border-radius:12px;background:var(--gold);font-weight:900;margin-top:8px}.secondary{background:#202a31;color:#fff;border:1px solid var(--line)}
+.date{background:#0e1419;color:#fff;border:1px solid var(--line);padding:9px 10px;border-radius:10px}.section-title{font-size:16px;font-weight:900}.empty{padding:18px 4px;color:var(--mut);font-size:13px;text-align:center}
+.statusdot{width:8px;height:8px;background:var(--green);border-radius:50%;display:inline-block;margin-right:5px}.footer{font-size:10px;color:#66737d;text-align:center;padding-top:8px}.manual{display:grid;grid-template-columns:36px 1fr;gap:8px;margin-top:8px}.manual .n{display:flex;align-items:center;justify-content:center;background:#1b242b;border:1px solid var(--line);border-radius:12px;font-weight:1000;color:var(--gold)}.manual input,.manual select{width:100%;background:#0e1419;color:#fff;border:1px solid var(--line);padding:10px;border-radius:10px;margin-top:6px}
+</style>
+</head>
+<body><div class="app">
+<div class="hero">
+  <div class="row between"><div class="logo">4 PICK<br>EDGE</div><span class="pill"><span class="statusdot"></span>LIVE</span></div>
+  <div class="tag">Análisis deportivo hecho por IA y analizado por humano</div>
+</div>
+
+<div class="card">
+  <div class="row between"><div class="section-title">Día de juego</div><input id="date" class="date" type="date"></div>
+  <div class="grid" style="margin-top:10px">
+    <button onclick="loadAll(true)">Actualizar</button>
+    <button class="secondary" onclick="settle()">Cerrar resultados</button>
+  </div>
+  <div id="health" class="mut" style="margin-top:9px">Conectando…</div>
+</div>
+
+<div class="card">
+  <div class="row between"><div class="section-title">Top 4</div><span id="topCount" class="pill">0 picks</span></div>
+  <div id="top4" class="empty">Cargando selecciones…</div>
+</div>
+
+
+<div class="card">
+  <div class="row between"><div class="section-title">Mis 4 análisis</div><span class="pill">Manual</span></div>
+  <div class="mut" style="margin-top:6px">Escribe tus selecciones después de analizar los juegos. Puedes guardar hasta cuatro.</div>
+  <div id="manualRows" style="margin-top:10px"></div>
+  <button onclick="saveManual()">Guardar mis 4 picks</button>
+  <div id="manualMsg" class="mut" style="margin-top:8px"></div>
+</div>
+
+<div class="card">
+  <div class="section-title">Rendimiento</div>
+  <div class="grid" style="margin-top:10px">
+    <div><div id="wins" class="kpi">0</div><div class="mut">Ganadas</div></div>
+    <div><div id="hit" class="kpi">—</div><div class="mut">Acierto</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="row between"><div class="section-title">Juegos MLB</div><span id="gameCount" class="pill">0 juegos</span></div>
+  <div id="games" class="empty">Cargando calendario…</div>
+</div>
+
+<div class="card">
+  <div class="section-title">Notificaciones</div>
+  <div class="mut">Activa alertas para resultados y cambios importantes.</div>
+  <button class="secondary" onclick="enablePush()">Activar notificaciones</button>
+  <div id="pushMsg" class="mut" style="margin-top:8px"></div>
+</div>
+<div class="footer">4 Pick Edge · Etapa 38</div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const pct=v=>v==null?'—':Math.round(v*100)+'%';
+function localDay(){const d=new Date();const z=new Date(d.getTime()-d.getTimezoneOffset()*60000);return z.toISOString().slice(0,10)}
+$('date').value=localDay(); $('date').addEventListener('change',()=>loadAll(false));
+function resultBadge(r){if(r==='W')return '<span class="badge win">✅ GANÓ</span>';if(r==='L')return '<span class="badge loss">❌ PERDIÓ</span>';if(r==='P')return '<span class="badge push">➖ PUSH</span>';return '<span class="badge pending">⏳ PENDIENTE</span>'}
+async function j(url,opt){const r=await fetch(url,opt);let d={};try{d=await r.json()}catch(e){}if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d}
+async function loadHealth(){try{const d=await j('/api/health');$('health').textContent=`Servidor conectado · ${d.version}`;}catch(e){$('health').textContent='Error de conexión: '+e.message}}
+async function loadTop4(refresh=false){const day=$('date').value;try{const d=await j(`/api/top4?date=${day}${refresh?'&refresh=1':''}`);$('topCount').textContent=`${d.count} picks`;if(!d.picks.length){$('top4').innerHTML='<div class="empty">No hay selecciones que superen los filtros todavía. La app no fuerza 4 picks.</div>';return}$('top4').innerHTML=d.picks.map(p=>`<div class="pick"><div class="row between"><span class="rank">#${p.rank}</span>${resultBadge(p.result)}</div><div class="sel">${p.selection_text}</div><div class="game">${p.game}</div><div class="row between" style="margin-top:8px"><span class="mut">Modelo ${pct(p.model_prob)}</span><span class="mut">Edge ${p.edge==null?'—':(p.edge*100).toFixed(1)+' pts'}</span></div></div>`).join('')}catch(e){$('top4').innerHTML='<div class="empty">No pude cargar Top 4: '+e.message+'</div>'}}
+async function loadStats(){try{const d=await j('/api/stats');$('wins').textContent=d.all.W||0;$('hit').textContent=d.all.hit_rate==null?'—':pct(d.all.hit_rate)}catch(e){$('wins').textContent='—';$('hit').textContent='—'}}
+async function loadGames(){const day=$('date').value;try{const d=await j(`/api/schedule?date=${day}`);$('gameCount').textContent=`${d.games.length} juegos`;if(!d.games.length){$('games').innerHTML='<div class="empty">No hay juegos MLB para esta fecha.</div>';return}$('games').innerHTML=d.games.map(g=>`<div class="pick"><div class="game">${g.status||''}</div><div class="sel" style="font-size:15px">${g.away_team} @ ${g.home_team}</div><div class="mut">${g.away_pitcher||'TBD'} vs ${g.home_pitcher||'TBD'}</div></div>`).join('')}catch(e){$('games').innerHTML='<div class="empty">Calendario no disponible: '+e.message+'</div>'}}
+async function settle(){try{const d=await j('/api/settle',{method:'POST'});await loadTop4(false);await loadStats();$('health').textContent=`Resultados actualizados · ${d.settled.length} cerrados`}catch(e){$('health').textContent='No pude cerrar resultados: '+e.message}}
+async function loadAll(refresh=false){await Promise.all([loadHealth(),loadTop4(refresh),loadStats(),loadGames()])}
+function b64ToUint8(s){const p='='.repeat((4-s.length%4)%4);const b=(s+p).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(b);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
+async function enablePush(){const m=$('pushMsg');m.textContent='Configurando…';try{if(!('serviceWorker'in navigator)||!('PushManager'in window)){throw new Error('Este navegador no soporta push web.')}const reg=await navigator.serviceWorker.register('/sw.js');const kd=await j('/api/push/public-key');const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToUint8(kd.publicKey)});await j('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub)});m.textContent='Notificaciones activadas ✅'}catch(e){m.textContent=e.message.includes('503')?'Faltan claves VAPID en el servidor.':e.message}}
+
+function buildManual(){
+  const html=[1,2,3,4].map(i=>`<div class="manual"><div class="n">${i}</div><div><input id="g${i}" placeholder="Juego: Yankees @ Red Sox"><input id="s${i}" placeholder="Selección: Yankees ML / Over 8.5"><select id="m${i}"><option value="moneyline">Ganador / Moneyline</option><option value="total">Alta / Baja</option><option value="runline">Run line</option><option value="nrfi">NRFI</option><option value="yrfi">YRFI</option></select></div></div>`).join('');
+  $('manualRows').innerHTML=html;
 }
+async function saveManual(){
+  const picks=[];
+  for(let i=1;i<=4;i++){
+    const game=$('g'+i).value.trim(), sel=$('s'+i).value.trim(), market=$('m'+i).value;
+    if(!game&&!sel) continue;
+    if(!game||!sel){$('manualMsg').textContent=`Completa juego y selección en el pick #${i}.`;return}
+    picks.push({game,selection_text:sel,side:sel,market_type:market,signal:'ANÁLISIS HUMANO'});
+  }
+  if(!picks.length){$('manualMsg').textContent='Escribe al menos un pick.';return}
+  $('manualMsg').textContent='Guardando…';
+  try{
+    await j('/api/top4/manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('date').value,picks})});
+    $('manualMsg').textContent='Picks guardados ✅';
+    await loadTop4(false);
+  }catch(e){$('manualMsg').textContent='No pude guardar: '+e.message}
+}
+
+if('serviceWorker'in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}
+buildManual();
+loadAll(false);
 </script></body></html>
