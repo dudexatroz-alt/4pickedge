@@ -68,7 +68,7 @@ button,input{font:inherit}button{width:100%;padding:12px;border:0;border-radius:
   <button class="secondary" onclick="enablePush()">Activar notificaciones</button>
   <div id="pushMsg" class="mut" style="margin-top:8px"></div>
 </div>
-<div class="footer">4 Pick Edge · Etapa 38</div>
+<div class="footer">4 Pick Edge · Etapa 40</div>
 </div>
 <script>
 const $=id=>document.getElementById(id);
@@ -80,31 +80,32 @@ async function j(url,opt){const r=await fetch(url,opt);let d={};try{d=await r.js
 async function loadHealth(){try{const d=await j('/api/health');$('health').textContent=`Servidor conectado · ${d.version}`;}catch(e){$('health').textContent='Error de conexión: '+e.message}}
 async function loadTop4(refresh=false){const day=$('date').value;try{const d=await j(`/api/top4?date=${day}${refresh?'&refresh=1':''}`);$('topCount').textContent=`${d.count} picks`;if(!d.picks.length){$('top4').innerHTML='<div class="empty">No hay selecciones que superen los filtros todavía. La app no fuerza 4 picks.</div>';return}$('top4').innerHTML=d.picks.map(p=>`<div class="pick"><div class="row between"><span class="rank">#${p.rank}</span>${resultBadge(p.result)}</div><div class="sel">${p.selection_text}</div><div class="game">${p.game}</div><div class="row between" style="margin-top:8px"><span class="mut">Modelo ${pct(p.model_prob)}</span><span class="mut">Edge ${p.edge==null?'—':(p.edge*100).toFixed(1)+' pts'}</span></div></div>`).join('')}catch(e){$('top4').innerHTML='<div class="empty">No pude cargar Top 4: '+e.message+'</div>'}}
 async function loadStats(){try{const d=await j('/api/stats');$('wins').textContent=d.all.W||0;$('hit').textContent=d.all.hit_rate==null?'—':pct(d.all.hit_rate)}catch(e){$('wins').textContent='—';$('hit').textContent='—'}}
-async function loadGames(){const day=$('date').value;try{const d=await j(`/api/schedule?date=${day}`);$('gameCount').textContent=`${d.games.length} juegos`;if(!d.games.length){$('games').innerHTML='<div class="empty">No hay juegos MLB para esta fecha.</div>';return}$('games').innerHTML=d.games.map(g=>`<div class="pick"><div class="game">${g.status||''}</div><div class="sel" style="font-size:15px">${g.away_team} @ ${g.home_team}</div><div class="mut">${g.away_pitcher||'TBD'} vs ${g.home_pitcher||'TBD'}</div></div>`).join('')}catch(e){$('games').innerHTML='<div class="empty">Calendario no disponible: '+e.message+'</div>'}}
+let scheduleGames=[];
+async function loadGames(){const day=$('date').value;try{const d=await j(`/api/schedule?date=${day}`);scheduleGames=d.games||[];$('gameCount').textContent=`${scheduleGames.length} juegos`;populateGameSelects();if(!scheduleGames.length){$('games').innerHTML='<div class="empty">No hay juegos MLB para esta fecha.</div>';return}$('games').innerHTML=scheduleGames.map(g=>`<div class="pick"><div class="game">${g.status||''}</div><div class="sel" style="font-size:15px">${g.away_team} @ ${g.home_team}</div><div class="mut">${g.away_pitcher||'TBD'} vs ${g.home_pitcher||'TBD'}</div></div>`).join('')}catch(e){scheduleGames=[];populateGameSelects();$('games').innerHTML='<div class="empty">Calendario no disponible: '+e.message+'</div>'}}
 async function settle(){try{const d=await j('/api/settle',{method:'POST'});await loadTop4(false);await loadStats();$('health').textContent=`Resultados actualizados · ${d.settled.length} cerrados`}catch(e){$('health').textContent='No pude cerrar resultados: '+e.message}}
 async function loadAll(refresh=false){await Promise.all([loadHealth(),loadTop4(refresh),loadStats(),loadGames()])}
 function b64ToUint8(s){const p='='.repeat((4-s.length%4)%4);const b=(s+p).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(b);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
 async function enablePush(){const m=$('pushMsg');m.textContent='Configurando…';try{if(!('serviceWorker'in navigator)||!('PushManager'in window)){throw new Error('Este navegador no soporta push web.')}const reg=await navigator.serviceWorker.register('/sw.js');const kd=await j('/api/push/public-key');const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToUint8(kd.publicKey)});await j('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub)});m.textContent='Notificaciones activadas ✅'}catch(e){m.textContent=e.message.includes('503')?'Faltan claves VAPID en el servidor.':e.message}}
 
+function gameOptions(){return '<option value="">Selecciona un juego MLB</option>'+scheduleGames.map(g=>`<option value="${g.game_pk}">${g.away_team} @ ${g.home_team}</option>`).join('')}
 function buildManual(){
-  const html=[1,2,3,4].map(i=>`<div class="manual"><div class="n">${i}</div><div><input id="g${i}" placeholder="Juego: Yankees @ Red Sox"><input id="s${i}" placeholder="Selección: Yankees ML / Over 8.5"><select id="m${i}"><option value="moneyline">Ganador / Moneyline</option><option value="total">Alta / Baja</option><option value="runline">Run line</option><option value="nrfi">NRFI</option><option value="yrfi">YRFI</option></select></div></div>`).join('');
-  $('manualRows').innerHTML=html;
+  const html=[1,2,3,4].map(i=>`<div class="manual"><div class="n">${i}</div><div><select id="g${i}" onchange="updateSide(${i})">${gameOptions()}</select><select id="m${i}" onchange="updateSide(${i})"><option value="moneyline">Ganador / Moneyline</option><option value="total">Alta / Baja</option><option value="runline">Run line</option><option value="nrfi/yrfi">NRFI / YRFI</option></select><select id="s${i}"></select><input id="l${i}" type="number" step="0.5" placeholder="Línea (ej. 8.5 o -1.5)" style="display:none"></div></div>`).join('');
+  $('manualRows').innerHTML=html; for(let i=1;i<=4;i++)updateSide(i);
 }
+function populateGameSelects(){for(let i=1;i<=4;i++){const el=$('g'+i);if(!el)continue;const old=el.value;el.innerHTML=gameOptions();if([...el.options].some(o=>o.value===old))el.value=old;updateSide(i)}}
+function selectedGame(i){const pk=Number($('g'+i).value);return scheduleGames.find(g=>Number(g.game_pk)===pk)}
+function updateSide(i){const g=selectedGame(i),m=$('m'+i).value,side=$('s'+i),line=$('l'+i);let opts=[];if(m==='moneyline'||m==='runline'){opts=g?[['away',g.away_team],['home',g.home_team]]:[]}else if(m==='total'){opts=[['over','Alta / Over'],['under','Baja / Under']]}else{opts=[['nrfi','NRFI'],['yrfi','YRFI']]}side.innerHTML=(opts.length?opts:[['','Selecciona juego primero']]).map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('');line.style.display=(m==='total'||m==='runline')?'block':'none'}
 async function saveManual(){
   const picks=[];
   for(let i=1;i<=4;i++){
-    const game=$('g'+i).value.trim(), sel=$('s'+i).value.trim(), market=$('m'+i).value;
-    if(!game&&!sel) continue;
-    if(!game||!sel){$('manualMsg').textContent=`Completa juego y selección en el pick #${i}.`;return}
-    picks.push({game,selection_text:sel,side:sel,market_type:market,signal:'ANÁLISIS HUMANO'});
+    const g=selectedGame(i); if(!g)continue; const market=$('m'+i).value,side=$('s'+i).value; const lineRaw=$('l'+i).value; const needsLine=market==='total'||market==='runline';
+    if(!side){$('manualMsg').textContent=`Selecciona el lado del pick #${i}.`;return} if(needsLine&&lineRaw===''){$('manualMsg').textContent=`Escribe la línea del pick #${i}.`;return}
+    const line=needsLine?Number(lineRaw):null; const sideName=side==='away'?g.away_team:side==='home'?g.home_team:side==='over'?'Over':side==='under'?'Under':side.toUpperCase();
+    const selection_text=needsLine?`${sideName} ${line>0?'+':''}${line}`:sideName;
+    picks.push({game_pk:g.game_pk,game:`${g.away_team} @ ${g.home_team}`,selection_text,side,market_type:market,line,signal:'ANÁLISIS HUMANO'});
   }
-  if(!picks.length){$('manualMsg').textContent='Escribe al menos un pick.';return}
-  $('manualMsg').textContent='Guardando…';
-  try{
-    await j('/api/top4/manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('date').value,picks})});
-    $('manualMsg').textContent='Picks guardados ✅';
-    await loadTop4(false);
-  }catch(e){$('manualMsg').textContent='No pude guardar: '+e.message}
+  if(!picks.length){$('manualMsg').textContent='Selecciona al menos un juego.';return}
+  $('manualMsg').textContent='Guardando…';try{await j('/api/top4/manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('date').value,picks})});$('manualMsg').textContent='Picks guardados y vinculados al juego ✅';await loadTop4(false)}catch(e){$('manualMsg').textContent='No pude guardar: '+e.message}
 }
 
 if('serviceWorker'in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}

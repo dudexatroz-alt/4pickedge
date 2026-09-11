@@ -40,7 +40,7 @@ def sw():
 def health():
     return jsonify({
         "ok": True,
-        "version": "3.8-dashboard",
+        "version": "4.0-settlement-ready",
         "push_configured": push_enabled(),
         "trading_enabled": False,
         "db": DB,
@@ -92,6 +92,7 @@ def api_top4_manual():
             "selection_text": p["selection_text"],
             "side": p["side"],
             "market_type": p["market_type"],
+            "line": p.get("line"),
             "token_id": p.get("token_id"),
             "market_price": p.get("market_price"),
             "model_prob": p.get("model_prob"),
